@@ -25,6 +25,8 @@
 //
 // ===============================================================================================
 
+#if UNITY_EDITOR
+
 using UnityEngine;
 using System.Collections;
 using UnityEditor;
@@ -32,7 +34,7 @@ using System.Collections.Generic;
 
 namespace UnityFBXExporter
 {
-	public class ExporterMenu : Editor 
+	public class ExporterMenu 
 	{
 		// Dropdown
 		[MenuItem("GameObject/FBX Exporter GameObjects", false)]
@@ -118,7 +120,7 @@ namespace UnityFBXExporter
                 }
                 else
                 {
-                    var tmpArr = FindObjectsOfType(typeof(MeshFilter)) as MeshFilter[];
+                    var tmpArr = Object.FindObjectsOfType(typeof(MeshFilter)) as MeshFilter[];
                     if (tmpArr != null)
                     {
                         sceneMeshes.AddRange(tmpArr);
@@ -203,3 +205,5 @@ namespace UnityFBXExporter
 		}
 	}
 }
+
+#endif
