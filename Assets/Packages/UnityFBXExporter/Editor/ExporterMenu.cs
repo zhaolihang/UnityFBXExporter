@@ -28,66 +28,110 @@
 using UnityEngine;
 using System.Collections;
 using UnityEditor;
+using System.Collections.Generic;
 
 namespace UnityFBXExporter
 {
 	public class ExporterMenu : Editor 
 	{
 		// Dropdown
-		[MenuItem("GameObject/FBX Exporter/Only GameObject", false, 40)]
+		[MenuItem("GameObject/FBX Exporter GameObjects", false)]
 		public static void ExportDropdownGameObjectToFBX()
 		{
 			ExportCurrentGameObject(false, false);
 		}
 
-		[MenuItem("GameObject/FBX Exporter/With new Materials", false, 41)]
-		public static void ExportDropdownGameObjectAndMaterialsToFBX()
-		{
-			ExportCurrentGameObject(true, false);
-		}
+		// [MenuItem("GameObject/FBX Exporter/With new Materials", false, 41)]
+		// public static void ExportDropdownGameObjectAndMaterialsToFBX()
+		// {
+		// 	ExportCurrentGameObject(true, false);
+		// }
 
-		[MenuItem("GameObject/FBX Exporter/With new Materials and Textures", false, 42)]
-		public static void ExportDropdownGameObjectAndMaterialsTexturesToFBX()
-		{
-			ExportCurrentGameObject(true, true);
-		}
+		// [MenuItem("GameObject/FBX Exporter/With new Materials and Textures", false, 42)]
+		// public static void ExportDropdownGameObjectAndMaterialsTexturesToFBX()
+		// {
+		// 	ExportCurrentGameObject(true, true);
+		// }
 
-		// Assets
-		[MenuItem("Assets/FBX Exporter/Only GameObject", false, 30)]
-		public static void ExportGameObjectToFBX()
-		{
-			ExportCurrentGameObject(false, false);
-		}
+		// // Assets
+		// [MenuItem("Assets/FBX Exporter/Only GameObject", false, 30)]
+		// public static void ExportGameObjectToFBX()
+		// {
+		// 	ExportCurrentGameObject(false, false);
+		// }
 		
-		[MenuItem("Assets/FBX Exporter/With new Materials", false, 31)]
-		public static void ExportGameObjectAndMaterialsToFBX()
-		{
-			ExportCurrentGameObject(true, false);
-		}
+		// [MenuItem("Assets/FBX Exporter/With new Materials", false, 31)]
+		// public static void ExportGameObjectAndMaterialsToFBX()
+		// {
+		// 	ExportCurrentGameObject(true, false);
+		// }
 		
-		[MenuItem("Assets/FBX Exporter/With new Materials and Textures", false, 32)]
-		public static void ExportGameObjectAndMaterialsTexturesToFBX()
-		{
-			ExportCurrentGameObject(true, true);
-		}
+		// [MenuItem("Assets/FBX Exporter/With new Materials and Textures", false, 32)]
+		// public static void ExportGameObjectAndMaterialsTexturesToFBX()
+		// {
+		// 	ExportCurrentGameObject(true, true);
+		// }
 		
 		private static void ExportCurrentGameObject(bool copyMaterials, bool copyTextures)
 		{
-			if(Selection.activeGameObject == null)
+			// if(Selection.activeGameObject == null)
+			// {
+			// 	EditorUtility.DisplayDialog("No Object Selected", "Please select any GameObject to Export to FBX", "Okay");
+			// 	return;
+			// }
+			
+			// GameObject currentGameObject = Selection.activeObject as GameObject;
+			
+			// if(currentGameObject == null)
+			// {
+			// 	EditorUtility.DisplayDialog("Warning", "Item selected is not a GameObject", "Okay");
+			// 	return;
+			// }
+
+			string lastPath = EditorPrefs.GetString("fbx_Export_lastPath", "");
+			string lastFileName = EditorPrefs.GetString("fbx_Export_lastFile", "unityexport.fbx");
+			string expFile = EditorUtility.SaveFilePanel("Export OBJ", lastPath, lastFileName, "fbx");
+			if (expFile.Length > 0)
 			{
-				EditorUtility.DisplayDialog("No Object Selected", "Please select any GameObject to Export to FBX", "Okay");
-				return;
+				var fi = new System.IO.FileInfo(expFile);
+				EditorPrefs.SetString("fbx_Export_lastFile", fi.Name);
+				EditorPrefs.SetString("fbx_Export_lastPath", fi.Directory.FullName);
+			}else{
+				return ;
 			}
-			
-			GameObject currentGameObject = Selection.activeObject as GameObject;
-			
-			if(currentGameObject == null)
-			{
-				EditorUtility.DisplayDialog("Warning", "Item selected is not a GameObject", "Okay");
-				return;
-			}
-			
-			ExportGameObject(currentGameObject, copyMaterials, copyTextures);
+
+            {
+                var onlySelectedObjects = true;
+                List<MeshFilter> sceneMeshes = new List<MeshFilter>();
+                if (onlySelectedObjects)
+                {
+                    List<MeshFilter> tempMFList = new List<MeshFilter>();
+                    foreach (GameObject g in Selection.gameObjects)
+                    {
+                        MeshFilter f = g.GetComponent<MeshFilter>();
+                        if (f != null)
+                        {
+                            tempMFList.Add(f);
+                        }
+                    }
+                    sceneMeshes.AddRange(tempMFList);
+                }
+                else
+                {
+                    var tmpArr = FindObjectsOfType(typeof(MeshFilter)) as MeshFilter[];
+                    if (tmpArr != null)
+                    {
+                        sceneMeshes.AddRange(tmpArr);
+                    }
+                }
+
+                var objs = new List<GameObject>();
+                foreach (var item in sceneMeshes)
+                {
+                    objs.Add(item.gameObject);
+                }
+				ExportGameObject(objs, copyMaterials, copyTextures , expFile);
+            }
 		}
 
 		/// <summary>
@@ -97,20 +141,20 @@ namespace UnityFBXExporter
 		/// <param name="gameObj">Game object to be exported</param>
 		/// <param name="copyMaterials">If set to <c>true</c> copy materials.</param>
 		/// <param name="copyTextures">If set to <c>true</c> copy textures.</param>
-		/// <param name="oldPath">Old path.</param>
-		public static string ExportGameObject(GameObject gameObj, bool copyMaterials, bool copyTextures, string oldPath = null)
+		/// <param name="expFile">expFile path.</param>
+		public static string ExportGameObject(List<GameObject> objs, bool copyMaterials, bool copyTextures, string expFile )
 		{
-			if(gameObj == null)
+			if(objs.Count==0)
 			{
 				EditorUtility.DisplayDialog("Object is null", "Please select any GameObject to Export to FBX", "Okay");
 				return null;
 			}
 			
-			string newPath = GetNewPath(gameObj, oldPath);
+			string newPath = expFile;
 			
 			if(newPath != null && newPath.Length != 0)
 			{
-				bool isSuccess = FBXExporter.ExportGameObjToFBX(gameObj, newPath, copyMaterials, copyTextures);
+				bool isSuccess = FBXExporter.ExportGameObjToFBX(objs, newPath, copyMaterials, copyTextures);
 				
 				if(isSuccess)
 				{

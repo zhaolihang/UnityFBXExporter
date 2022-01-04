@@ -531,13 +531,13 @@ namespace UnityFBXExporter
 
 			}
 
-			// Recursively add all the other objects to the string that has been built.
-			for(int i = 0; i < gameObj.transform.childCount; i++)
-			{
-				GameObject childObject = gameObj.transform.GetChild(i).gameObject;
+			// // Recursively add all the other objects to the string that has been built.
+			// for(int i = 0; i < gameObj.transform.childCount; i++)
+			// {
+			// 	GameObject childObject = gameObj.transform.GetChild(i).gameObject;
 
-				FBXUnityMeshGetter.GetMeshToString(childObject, materials, ref tempObjectSb, ref tempConnectionsSb, gameObj, modelId);
-			}
+			// 	FBXUnityMeshGetter.GetMeshToString(childObject, materials, ref tempObjectSb, ref tempConnectionsSb, gameObj, modelId);
+			// }
 
 			objects.Append(tempObjectSb.ToString());
 			connections.Append(tempConnectionsSb.ToString());

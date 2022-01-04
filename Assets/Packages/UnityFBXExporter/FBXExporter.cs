@@ -38,7 +38,7 @@ namespace UnityFBXExporter
 {
 	public class FBXExporter
 	{
-		public static bool ExportGameObjToFBX(GameObject gameObj, string newPath, bool copyMaterials = false, bool copyTextures = false)
+		public static bool ExportGameObjToFBX(List<GameObject> objs, string newPath, bool copyMaterials = false, bool copyTextures = false)
 		{
 			// Check to see if the extension is right
 			if (Path.GetExtension(newPath).ToLower() != ".fbx")
@@ -48,43 +48,43 @@ namespace UnityFBXExporter
 			}
 
 			if(copyMaterials)
-				CopyComplexMaterialsToPath(gameObj, newPath, copyTextures);
+				CopyComplexMaterialsToPath(objs[0], newPath, copyTextures);
 
-			string buildMesh = MeshToString(gameObj, newPath, copyMaterials, copyTextures);
+			string buildMesh = MeshToString(objs, newPath, copyMaterials, copyTextures);
 
 			if(System.IO.File.Exists(newPath))
 				System.IO.File.Delete(newPath);
 
 			System.IO.File.WriteAllText(newPath, buildMesh);
 
-#if UNITY_EDITOR
-			// Import the model properly so it looks for the material instead of by the texture name
-			// TODO: By calling refresh, it imports the model with the wrong materials, but we can't find the model to import without
-			// refreshing the database. A chicken and the egg issue
-			AssetDatabase.Refresh();
-			string stringLocalPath = newPath.Remove(0, newPath.LastIndexOf("/Assets") + 1);
-			ModelImporter modelImporter = ModelImporter.GetAtPath(stringLocalPath) as ModelImporter;
-			if(modelImporter != null)
-			{
-				ModelImporterMaterialName modelImportOld = modelImporter.materialName;
-				modelImporter.materialName = ModelImporterMaterialName.BasedOnMaterialName;
-#if UNITY_5_1
-                modelImporter.normalImportMode = ModelImporterTangentSpaceMode.Import;
-#else
-                modelImporter.importNormals = ModelImporterNormals.Import;
-#endif
-                if (copyMaterials == false)
-					modelImporter.materialSearch = ModelImporterMaterialSearch.Everywhere;
+// #if UNITY_EDITOR
+// 			// Import the model properly so it looks for the material instead of by the texture name
+// 			// TODO: By calling refresh, it imports the model with the wrong materials, but we can't find the model to import without
+// 			// refreshing the database. A chicken and the egg issue
+// 			AssetDatabase.Refresh();
+// 			string stringLocalPath = newPath.Remove(0, newPath.LastIndexOf("/Assets") + 1);
+// 			ModelImporter modelImporter = ModelImporter.GetAtPath(stringLocalPath) as ModelImporter;
+// 			if(modelImporter != null)
+// 			{
+// 				ModelImporterMaterialName modelImportOld = modelImporter.materialName;
+// 				modelImporter.materialName = ModelImporterMaterialName.BasedOnMaterialName;
+// #if UNITY_5_1
+//                 modelImporter.normalImportMode = ModelImporterTangentSpaceMode.Import;
+// #else
+//                 modelImporter.importNormals = ModelImporterNormals.Import;
+// #endif
+//                 if (copyMaterials == false)
+// 					modelImporter.materialSearch = ModelImporterMaterialSearch.Everywhere;
 				
-				AssetDatabase.ImportAsset(stringLocalPath, ImportAssetOptions.ForceUpdate);
-			}
-			else
-			{
-				Debug.Log("Model Importer is null and can't import");
-			}
+// 				AssetDatabase.ImportAsset(stringLocalPath, ImportAssetOptions.ForceUpdate);
+// 			}
+// 			else
+// 			{
+// 				Debug.Log("Model Importer is null and can't import");
+// 			}
 
-			AssetDatabase.Refresh(); 
-#endif
+// 			AssetDatabase.Refresh(); 
+// #endif
                 return true;
 		}
 
@@ -98,7 +98,7 @@ namespace UnityFBXExporter
 			return System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(), 0);
 		}
 
-		public static string MeshToString (GameObject gameObj, string newPath, bool copyMaterials = false, bool copyTextures = false)
+		public static string MeshToString (List<GameObject> objs, string newPath, bool copyMaterials = false, bool copyTextures = false)
 		{
 			StringBuilder sb = new StringBuilder();
 			
@@ -121,10 +121,14 @@ namespace UnityFBXExporter
 			string materialsObjectSerialized = "";
 			string materialConnectionsSerialized = "";
 
-			FBXUnityMaterialGetter.GetAllMaterialsToString(gameObj, newPath, copyMaterials, copyTextures, out materials, out materialsObjectSerialized, out materialConnectionsSerialized);
+			FBXUnityMaterialGetter.GetAllMaterialsToString(objs[0], newPath, copyMaterials, copyTextures, out materials, out materialsObjectSerialized, out materialConnectionsSerialized);
 
-			// Run recursive FBX Mesh grab over the entire gameobject
-			FBXUnityMeshGetter.GetMeshToString(gameObj, materials, ref objectProps, ref objectConnections);
+            // Run recursive FBX Mesh grab over the entire gameobject
+
+            foreach (var obj in objs)
+            {
+                FBXUnityMeshGetter.GetMeshToString(obj, materials, ref objectProps, ref objectConnections);
+            }
 
 			// write the materials to the objectProps here. Should not do it in the above as it recursive.
 
